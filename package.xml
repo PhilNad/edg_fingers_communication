@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>edg_fingers_communication</name>
+  <version>0.0.1</version>
+  <description>The edg_fingers_communication package listens for any information sent by the Arduino board through the serial line and publishes it on a ROS topic.</description>
+  <author email="philippe.nadeau.3@ens.etsmtl.ca">Philippe Nadeau</author>
+  <maintainer email="philippe-nadeau@outlook.com">Philippe Nadeau</maintainer>
+  <license>GPLv3</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+  <build_depend>roscpp</build_depend>
+  <build_depend>std_msgs</build_depend>
+  <build_export_depend>roscpp</build_export_depend>
+  <build_export_depend>std_msgs</build_export_depend>
+  <exec_depend>roscpp</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+
+
+  <!-- The export tag contains other, unspecified, tags -->
+  <export>
+    <!-- Other tools can request additional information be placed here -->
+
+  </export>
+</package>
