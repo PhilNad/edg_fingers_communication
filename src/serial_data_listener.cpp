@@ -109,10 +109,14 @@ void processData(){
 }
 
 int main(int argc, char **argv){
-    //The first argument of the service must represent the fil descriptor of the
+    //The first argument of the service must represent the file descriptor of the
     // TTY being used. Most of the time, it is /dev/ttyACM0 but it can be mapped
     // to /dev/ttyACM1, for example, if the RObotiq 2f-140 gripper is plugged in
     // and is already using that file path.
+    if(argc != 2){
+      ROS_ERROR("The TTY path must be given as the sole argument.");
+      return 1;
+    }
     char* serialTtyPath = argv[1];
     FILE* file_pointer;
     file_pointer = fopen(serialTtyPath,"r");
@@ -137,27 +141,31 @@ int main(int argc, char **argv){
     //Initialize the timestamp.
     data_read_timestamp = chrono::high_resolution_clock::now();
 
+
     //If ROS is being closed by the user, we want to stop this process.
     while(ros::ok()){
         //Reads the content of the file descriptor of the Serial communication
-        char byteRead = fgetc(file_pointer);
-        //If nothing can be read at the moment, byteRead will equal -1 or EOF
-        if(byteRead >= 0){
-          //Upon the reception of a newline character, we process the serial data.
-          if(byteRead == '\n'){
-            //Publishes the accumulated data on ROS topics.
-            processData();
-            //Remove all accumulated data from the buffer.
-            serialDataBuffer.clear();
-          }else{
-            //Append the byte read to our buffer
-            serialDataBuffer.push_back(byteRead);
-          }
+        if(file_pointer){
+          char byteRead = fgetc(file_pointer);
+          //If nothing can be read at the moment, byteRead will equal -1 or EOF
+          if(byteRead >= 0){
+            //Upon the reception of a newline character, we process the serial data.
+            if(byteRead == '\n'){
+              //Publishes the accumulated data on ROS topics.
+              processData();
+              //Remove all accumulated data from the buffer.
+              serialDataBuffer.clear();
+            }else{
+              //Append the byte read to our buffer
+              serialDataBuffer.push_back(byteRead);
+            }
+        }
       }
     }
 
     //Close the file before exiting the program.
-    fclose(file_pointer);
+    if(file_pointer)
+      fclose(file_pointer);
 
     return 0;
 }
