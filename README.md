@@ -1,4 +1,4 @@
-# EDG Fingers Communication ROS Package
+# EDG Fingers Communication ROS Package (Publisher/C++)
 
 ## Objective
 The principal objective of this program is to make available to ROS the data coming from a serial connection. Although this ROS package was developed in the context of an Arduino Uno streaming data as fast as possible to a PC, it could be used with another interface with very little change.
