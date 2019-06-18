@@ -13,7 +13,7 @@
 using namespace std;
 
 //Used to record the data read from the serial line.
-vector<char> serialDataBuffer;
+vector<unsigned char> serialDataBuffer;
 
 //Recordings of the preivous positions, see below.
 int previous_finger1_pos, previous_finger2_pos;
@@ -79,8 +79,8 @@ void processData(){
     if(serialDataBuffer.size() == 11){
         //A valid message should have commas at these positions
         if(serialDataBuffer[2] == ',' && serialDataBuffer[5] == ',' && serialDataBuffer[8] == ',' ){
-            char MSB = 0;
-            char LSB = 0;
+            unsigned char MSB = 0;
+            unsigned char LSB = 0;
 
             //Intepret the MSB and LSB as a single 16 bits integer.
             //To do so, we take the MSB and shift it 8 bits to the left and
@@ -109,6 +109,9 @@ void processData(){
 }
 
 int main(int argc, char **argv){
+    //Initialize the ROS node
+    ros::init(argc, argv, "edg_fingers_com_node");
+
     //The first argument of the service must represent the file descriptor of the
     // TTY being used. Most of the time, it is /dev/ttyACM0 but it can be mapped
     // to /dev/ttyACM1, for example, if the RObotiq 2f-140 gripper is plugged in
@@ -119,10 +122,7 @@ int main(int argc, char **argv){
     }
     char* serialTtyPath = argv[1];
     FILE* file_pointer;
-    file_pointer = fopen(serialTtyPath,"r");
-
-    //Initialize the ROS node
-    ros::init(argc, argv, "edg_fingers_com_node");
+    file_pointer = fopen(serialTtyPath,"rb");
 
     //Instantiate the handle, needs to be done after ros::init
     thisNode = new ros::NodeHandle();
@@ -146,9 +146,9 @@ int main(int argc, char **argv){
     while(ros::ok()){
         //Reads the content of the file descriptor of the Serial communication
         if(file_pointer){
-          char byteRead = fgetc(file_pointer);
+          int byteRead = fgetc(file_pointer);
           //If nothing can be read at the moment, byteRead will equal -1 or EOF
-          if(byteRead >= 0){
+          if(byteRead != EOF){
             //Upon the reception of a newline character, we process the serial data.
             if(byteRead == '\n'){
               //Publishes the accumulated data on ROS topics.
