@@ -82,6 +82,11 @@ void processData(){
             unsigned char MSB = 0;
             unsigned char LSB = 0;
 
+            //Debugging
+            /*for(int i = 0; i < serialDataBuffer.size(); i++)
+                printf("%d ",serialDataBuffer[i]);
+            printf("\n");*/
+
             //Intepret the MSB and LSB as a single 16 bits integer.
             //To do so, we take the MSB and shift it 8 bits to the left and
             //then use a OR bitwise operation to set the LSB.
@@ -105,7 +110,10 @@ void processData(){
             publishData(finger1_pos, finger1_pressure, finger2_pos, finger2_pressure);
 
         }else{ROS_WARN("Received message is malformated.");}
-    }else{ROS_WARN("Received message's length is incorrect.");}
+    }else{
+      //This will happen from times to times, no need to clutter the screen.
+      //ROS_WARN("Received message's length is incorrect.");
+    }
 }
 
 int main(int argc, char **argv){
