@@ -74,46 +74,36 @@ void publishData(uint16_t finger1_pos, uint16_t finger1_pressure, uint16_t finge
 //publishes it on ROS topics so other nodes can read it.
 void processData(){
     //The Arduino Uno's integer is made of 2 bytes, the Most Significant Byte (MSB)
-    //and the Least Significant Byte (LSB). As four integers are sent separated by
-    //commas (1 byte each), the whole message should be 4*2+3=11 bytes long.
-    if(serialDataBuffer.size() == 11){
-        //A valid message should have commas at these positions
-        if(serialDataBuffer[2] == ',' && serialDataBuffer[5] == ',' && serialDataBuffer[8] == ',' ){
-            unsigned char MSB = 0;
-            unsigned char LSB = 0;
+    //and the Least Significant Byte (LSB).
+    unsigned char MSB = 0;
+    unsigned char LSB = 0;
 
-            //Debugging
-            /*for(int i = 0; i < serialDataBuffer.size(); i++)
-                printf("%d ",serialDataBuffer[i]);
-            printf("\n");*/
+    //Debugging
+    /*for(int i = 0; i < serialDataBuffer.size(); i++)
+        printf("%d ",serialDataBuffer[i]);
+    printf("\n");*/
 
-            //Intepret the MSB and LSB as a single 16 bits integer.
-            //To do so, we take the MSB and shift it 8 bits to the left and
-            //then use a OR bitwise operation to set the LSB.
-            MSB = serialDataBuffer[0];
-            LSB = serialDataBuffer[1];
-            uint16_t finger1_pos      = (MSB<<8) | LSB;
+    //Intepret the MSB and LSB as a single 16 bits integer.
+    //To do so, we take the MSB and shift it 8 bits to the left and
+    //then use a OR bitwise operation to set the LSB.
+    MSB = serialDataBuffer[0];
+    LSB = serialDataBuffer[1];
+    uint16_t finger1_pos      = (MSB<<8) | LSB;
 
-            MSB = serialDataBuffer[3];
-            LSB = serialDataBuffer[4];
-            uint16_t finger2_pos      = (MSB<<8) | LSB;
+    MSB = serialDataBuffer[3];
+    LSB = serialDataBuffer[4];
+    uint16_t finger2_pos      = (MSB<<8) | LSB;
 
-            MSB = serialDataBuffer[6];
-            LSB = serialDataBuffer[7];
-            uint16_t finger1_pressure = (MSB<<8) | LSB;
+    MSB = serialDataBuffer[6];
+    LSB = serialDataBuffer[7];
+    uint16_t finger1_pressure = (MSB<<8) | LSB;
 
-            MSB = serialDataBuffer[9];
-            LSB = serialDataBuffer[10];
-            uint16_t finger2_pressure = (MSB<<8) | LSB;
+    MSB = serialDataBuffer[9];
+    LSB = serialDataBuffer[10];
+    uint16_t finger2_pressure = (MSB<<8) | LSB;
 
-            //ROS_INFO("Successfully extracted data elements from serial communication.");
-            publishData(finger1_pos, finger1_pressure, finger2_pos, finger2_pressure);
-
-        }else{ROS_WARN("Received message is malformated.");}
-    }else{
-      //This will happen from times to times, no need to clutter the screen.
-      //ROS_WARN("Received message's length is incorrect.");
-    }
+    //ROS_INFO("Successfully extracted data elements from serial communication.");
+    publishData(finger1_pos, finger1_pressure, finger2_pos, finger2_pressure);
 }
 
 int main(int argc, char **argv){
@@ -157,18 +147,29 @@ int main(int argc, char **argv){
           int byteRead = fgetc(file_pointer);
           //If nothing can be read at the moment, byteRead will equal -1 or EOF
           if(byteRead != EOF){
-            //Upon the reception of a newline character, we process the serial data.
-            if(byteRead == '\n'){
-              //Publishes the accumulated data on ROS topics.
-              processData();
-              //Remove all accumulated data from the buffer.
-              serialDataBuffer.clear();
+            //As per the protocol, we need 12 bytes to make a full message
+            if(serialDataBuffer.size() >= 12){
+              //Test to see if the message inside our buffer respects the protocol
+              if(serialDataBuffer[2] == ',' && serialDataBuffer[5] == ',' &&
+                 serialDataBuffer[8] == ',' && serialDataBuffer[11] == '\n'){
+                //Publishes the accumulated data on ROS topics.
+                processData();
+                //Remove all accumulated data from the buffer.
+                serialDataBuffer.clear();
+              }else{
+                //Move every element one position toward the first
+                for(int i = 0; i < 12 ; i++)
+                  serialDataBuffer[i] = serialDataBuffer[i+1];
+                //Append the byte read to our buffer
+                serialDataBuffer[11] = byteRead;
+              }
             }else{
-              //Append the byte read to our buffer
+              //If we dont have gathered 12 bytes yet,
+              //Append an element at the end
               serialDataBuffer.push_back(byteRead);
             }
+          }
         }
-      }
     }
 
     //Close the file before exiting the program.
