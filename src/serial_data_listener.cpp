@@ -29,9 +29,45 @@ ros::NodeHandle *thisNode;
 ros::Publisher finger1_position_pub;
 ros::Publisher finger1_velocity_pub;
 ros::Publisher finger1_pressure_pub;
+ros::Publisher finger1_mean_pressure_pub;
 ros::Publisher finger2_position_pub;
 ros::Publisher finger2_velocity_pub;
 ros::Publisher finger2_pressure_pub;
+ros::Publisher finger2_mean_pressure_pub;
+
+//Vector to calculate the mean pressures
+vector<uint16_t> finger1_pressure_vector;
+vector<uint16_t> finger2_pressure_vector;
+
+//This computes the average of the values in the submitted vector
+//and returns it as an uint16_t
+uint16_t computeMean(vector<uint16_t> &pressure_vector){
+  uint16_t sum = 0;
+  for(int i = 0; i < pressure_vector.size() ; i++)
+    sum += pressure_vector[i];
+
+  uint16_t mean = sum / pressure_vector.size();
+  return mean;
+}
+
+
+//This function updates the vector that should contain the last pressure values
+//in order to allow a moving average computation.
+void addPressureDatapoint(vector<uint16_t> &pressure_vector, uint16_t datapoint){
+  const int averaginWindowSize = 100;
+  //If 100 points have already been gathered, drop the oldest and append the newest
+  if(pressure_vector.size() >= averaginWindowSize){
+    //Move every element one position toward the first
+    for(int i = 0; i < pressure_vector.size() ; i++)
+      pressure_vector[i] = pressure_vector[i+1];
+
+    //Append the byte read to our buffer
+    pressure_vector[averaginWindowSize-1] = datapoint;
+  }else{
+    //If we dont have gathered 100 datapoints yet, just append the newest.
+    pressure_vector.push_back(datapoint);
+  }
+}
 
 //Publishes onto ROS topics the data extracted from the serial communication.
 void publishData(uint16_t finger1_pos, uint16_t finger1_pressure, uint16_t finger2_pos, uint16_t finger2_pressure){
@@ -49,6 +85,11 @@ void publishData(uint16_t finger1_pos, uint16_t finger1_pressure, uint16_t finge
   msg_pressure.data = finger1_pressure;
   finger1_pressure_pub.publish(msg_pressure);
 
+  addPressureDatapoint(finger1_pressure_vector, finger1_pressure);
+  uint16_t finger1_pressure_mean = computeMean(finger1_pressure_vector);
+  msg_pressure.data = finger1_pressure_mean;
+  finger1_mean_pressure_pub.publish(msg_pressure);
+
   //We calculate the velocity by dividing the position difference by the time difference
   //and interpreting it in seconds instead of microseconds.
   msg_velocity.data = (float) (finger1_pos-previous_finger1_pos)/time_span.count();
@@ -59,6 +100,11 @@ void publishData(uint16_t finger1_pos, uint16_t finger1_pressure, uint16_t finge
 
   msg_pressure.data = finger2_pressure;
   finger2_pressure_pub.publish(msg_pressure);
+
+  addPressureDatapoint(finger2_pressure_vector, finger2_pressure);
+  uint16_t finger2_pressure_mean = computeMean(finger2_pressure_vector);
+  msg_pressure.data = finger2_pressure_mean;
+  finger2_mean_pressure_pub.publish(msg_pressure);
 
   //We calculate the velocity by dividing the position difference by the time difference
   //and interpreting it in seconds instead of microseconds.
@@ -129,10 +175,12 @@ int main(int argc, char **argv){
     finger1_position_pub  = thisNode->advertise<std_msgs::UInt16>("fingers/1/position", 1);
     finger1_velocity_pub  = thisNode->advertise<std_msgs::Float32>("fingers/1/velocity", 1);
     finger1_pressure_pub  = thisNode->advertise<std_msgs::UInt16>("fingers/1/pressure", 1);
+    finger1_mean_pressure_pub  = thisNode->advertise<std_msgs::UInt16>("fingers/1/meanpressure", 1);
 
     finger2_position_pub  = thisNode->advertise<std_msgs::UInt16>("fingers/2/position", 1);
     finger2_velocity_pub  = thisNode->advertise<std_msgs::Float32>("fingers/2/velocity", 1);
     finger2_pressure_pub  = thisNode->advertise<std_msgs::UInt16>("fingers/2/pressure", 1);
+    finger2_mean_pressure_pub  = thisNode->advertise<std_msgs::UInt16>("fingers/2/meanpressure", 1);
 
     ROS_INFO("Ready to listen for any EDG data on the serial line.");
 
